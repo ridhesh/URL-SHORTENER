@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found - Shorty</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .error-container {
+            text-align: center;
+            padding: 4rem 1rem;
+        }
+        
+        .error-code {
+            font-size: 8rem;
+            font-weight: 900;
+            background: linear-gradient(to right, #FF4B2B, #FF416C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        
+        .error-icon {
+            font-size: 5rem;
+            color: #FF4B2B;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <i class="fas fa-link"></i> Shorty
+        </a>
+    </nav>
+
+    <div class="main-container">
+        <div class="error-container">
+            <div class="error-icon">
+                <i class="fas fa-link-slash"></i>
+            </div>
+            <div class="error-code">404</div>
+            <h1 style="margin: 1rem 0;">Short Link Not Found</h1>
+            <p style="color: #666; max-width: 500px; margin: 0 auto 2rem;">
+                The short URL you're looking for doesn't exist or has been deleted.
+            </p>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="/" class="btn">
+                    <i class="fas fa-home"></i> Go Home
+                </a>
+                <a href="/dashboard" class="btn btn-secondary">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

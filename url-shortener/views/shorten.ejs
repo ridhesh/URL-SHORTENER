@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shorten URL - Shorty</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <i class="fas fa-link"></i> Shorty
+        </a>
+        <div class="nav-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="card" style="max-width: 600px; margin: 2rem auto;">
+            <h1 style="margin-bottom: 1rem;">
+                <i class="fas fa-magic"></i> Create Short URL
+            </h1>
+            
+            <p style="color: #666; margin-bottom: 2rem;">
+                Paste your long URL below and get a short, shareable link instantly.
+            </p>
+
+            <% if (error) { %>
+                <div class="alert alert-error" style="margin-bottom: 1.5rem;">
+                    <i class="fas fa-exclamation-triangle"></i> <%= error %>
+                </div>
+            <% } %>
+
+            <% if (success) { %>
+                <div class="alert alert-success" style="margin-bottom: 1.5rem;">
+                    <i class="fas fa-check-circle"></i> <%= success %>
+                </div>
+                
+                <% if (shortUrl) { %>
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; margin: 1.5rem 0;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 0.5rem;">Your Short URL:</div>
+                            <div style="font-size: 1.2rem; color: #FF4B2B; word-break: break-all;">
+                                <i class="fas fa-link"></i> <%= shortUrl %>
+                            </div>
+                        </div>
+                        <button onclick="copyToClipboard('<%= shortUrl %>')" class="btn">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                <% } %>
+            <% } %>
+
+            <form method="POST">
+                <div class="form-group">
+                    <label for="long_url">Paste Long URL</label>
+                    <input type="url" id="long_url" name="long_url" 
+                           placeholder="https://example.com/very-long-url" 
+                           required>
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+                        <i class="fas fa-info-circle"></i> Include http:// or https://
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%;">
+                    <i class="fas fa-bolt"></i> Shorten URL
+                </button>
+            </form>
+
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
+                <h3 style="margin-bottom: 1rem;">
+                    <i class="fas fa-lightbulb"></i> Quick Tips
+                </h3>
+                <ul style="color: #666; list-style: none; padding: 0;">
+                    <li style="margin-bottom: 0.5rem;">
+                        <i class="fas fa-check" style="color: #28a745;"></i>
+                        Use for social media posts
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
+                        <i class="fas fa-check" style="color: #28a745;"></i>
+                        Track marketing campaigns
+                    </li>
+                    <li style="margin-bottom: 0.5rem;">
+                        <i class="fas fa-check" style="color: #28a745;"></i>
+                        Share in emails and messages
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="/dashboard" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target.closest('button');
+                const original = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                btn.style.background = 'linear-gradient(to right, #28a745, #20c997)';
+                
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.style.background = 'linear-gradient(to right, #FF4B2B, #FF416C)';
+                }, 2000);
+            });
+        }
+        
+        // Focus the input field
+        document.getElementById('long_url')?.focus();
+    </script>
+</body>
+</html>
