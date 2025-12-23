@@ -1,161 +1,96 @@
 const pool = require('./database');
 
-class SimpleInsights {
-    // Human-like analysis of URL data
-    static async getInsights(urlId, userId) {
+class AIInsights {
+    static async generateInsights(urlId, userId) {
         try {
-            // Get URL info
-            const [urlData] = await pool.execute(
+            // Get URL data
+            const [urls] = await pool.execute(
                 `SELECT * FROM urls WHERE id = ? AND user_id = ?`,
                 [urlId, userId]
             );
             
-            if (urlData.length === 0) {
-                return "🔍 No data available for this URL.";
+            if (urls.length === 0) {
+                return "🤖 AI Insight: No data available for this URL.";
             }
             
-            const url = urlData[0];
-            const clicks = url.clicks;
+            const url = urls[0];
+            const clicks = url.clicks || 0;
             
-            // Get recent activity
-            const [recentData] = await pool.execute(
-                `SELECT 
-                    DATE(clicked_at) as click_date,
-                    COUNT(*) as daily_clicks
-                 FROM clicks 
-                 WHERE url_id = ?
-                 GROUP BY DATE(clicked_at)
-                 ORDER BY click_date DESC
-                 LIMIT 7`,
-                [urlId]
-            );
+            // Simple AI analysis based on clicks
+            let insights = [];
             
-            // Get hour patterns
-            const [hourData] = await pool.execute(
-                `SELECT 
-                    HOUR(clicked_at) as hour,
-                    COUNT(*) as hour_clicks
-                 FROM clicks 
-                 WHERE url_id = ?
-                 GROUP BY HOUR(clicked_at)
-                 ORDER BY hour_clicks DESC
-                 LIMIT 3`,
-                [urlId]
-            );
-            
-            // Start building insights
-            const insights = [];
-            
-            // 1. Overall performance
-            if (clicks === 0) {
-                insights.push("🚀 New link! Start sharing to get your first click.");
-            } else if (clicks < 5) {
-                insights.push(`👍 Getting started with ${clicks} clicks. Keep going!`);
-            } else if (clicks < 20) {
-                insights.push(`📈 Good momentum! ${clicks} clicks so far.`);
-            } else if (clicks < 100) {
-                insights.push(`🔥 Hot link! ${clicks} clicks and growing.`);
-            } else {
-                insights.push(`🎉 Amazing! ${clicks} total clicks!`);
-            }
-            
-            // 2. Recent activity
-            if (recentData.length > 0) {
-                const today = new Date().toISOString().split('T')[0];
-                const todayClicks = recentData.find(d => d.click_date === today)?.daily_clicks || 0;
-                
-                if (todayClicks > 0) {
-                    insights.push(`✨ ${todayClicks} clicks today.`);
-                }
-                
-                // Check if growth is happening
-                if (recentData.length >= 2) {
-                    const yesterdayClicks = recentData[1]?.daily_clicks || 0;
-                    const dayBeforeClicks = recentData[2]?.daily_clicks || 0;
-                    
-                    if (todayClicks > yesterdayClicks && todayClicks > dayBeforeClicks) {
-                        insights.push("📊 Growing faster each day!");
-                    }
-                }
-            }
-            
-            // 3. Best times
-            if (hourData.length > 0) {
-                const bestHour = hourData[0];
-                const time = this.formatTime(bestHour.hour);
-                insights.push(`⏰ Best time: ${time} (${bestHour.hour_clicks} clicks)`);
-            }
-            
-            // 4. Age of link
-            const createdDate = new Date(url.created_at);
-            const daysOld = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
-            
-            if (daysOld === 0) {
-                insights.push("🆕 Created today!");
-            } else if (daysOld === 1) {
-                insights.push("📅 Created yesterday.");
-            } else if (daysOld < 7) {
-                insights.push(`📅 ${daysOld} days old.`);
-            } else if (daysOld < 30) {
-                const weeks = Math.floor(daysOld / 7);
-                insights.push(`📅 ${weeks} week${weeks > 1 ? 's' : ''} old.`);
-            }
-            
-            // 5. Suggestions based on performance
-            if (clicks > 10) {
-                if (hourData.length > 0) {
-                    const popularHour = hourData[0].hour;
-                    if (popularHour >= 9 && popularHour <= 17) {
-                        insights.push("💡 People love your links during work hours!");
-                    } else {
-                        insights.push("💡 Great evening/off-hours engagement!");
-                    }
-                }
-            }
-            
-            // Add one final encouraging message
-            const encouraging = [
-                "Keep sharing!",
-                "Great work!",
-                "You're doing amazing!",
-                "Keep it up!",
-                "Awesome progress!"
+            // AI Personality
+            const aiStyles = [
+                { emoji: '🤖', style: 'AI Analysis' },
+                { emoji: '🧠', style: 'Smart Insight' },
+                { emoji: '⚡', style: 'Quick Analysis' }
             ];
-            insights.push(encouraging[Math.floor(Math.random() * encouraging.length)]);
+            const ai = aiStyles[Math.floor(Math.random() * aiStyles.length)];
             
-            return insights.join(' ');
+            // Performance analysis
+            if (clicks === 0) {
+                insights.push(`${ai.emoji} ${ai.style}: New link ready for action!`);
+                insights.push(`💡 Try sharing on social media to get started.`);
+            } else if (clicks < 10) {
+                insights.push(`${ai.emoji} ${ai.style}: Gaining traction with ${clicks} clicks.`);
+                insights.push(`🌟 Keep sharing to build momentum!`);
+            } else if (clicks < 50) {
+                insights.push(`${ai.emoji} ${ai.style}: Good engagement! ${clicks} clicks so far.`);
+                insights.push(`📈 Growing steadily.`);
+            } else if (clicks < 100) {
+                insights.push(`${ai.emoji} ${ai.style}: Strong performance! ${clicks} clicks and counting.`);
+                insights.push(`🔥 Your content is resonating well.`);
+            } else {
+                insights.push(`${ai.emoji} ${ai.style}: Excellent! ${clicks} clicks - top performer!`);
+                insights.push(`🏆 Champion-level engagement.`);
+            }
             
-        } catch (error) {
-            console.log("💭 Insights error:", error.message);
-            return "📊 Checking your link's performance...";
-        }
-    }
-    
-    static formatTime(hour) {
-        if (hour === 0) return "12 AM";
-        if (hour < 12) return `${hour} AM`;
-        if (hour === 12) return "12 PM";
-        return `${hour - 12} PM`;
-    }
-    
-    // Get basic stats for dashboard
-    static async getQuickStats(userId) {
-        try {
-            const [stats] = await pool.execute(
+            // Get some basic analytics
+            const [clickData] = await pool.execute(
                 `SELECT 
-                    COUNT(*) as total_urls,
-                    SUM(clicks) as total_clicks,
-                    AVG(clicks) as avg_clicks
-                 FROM urls 
-                 WHERE user_id = ?`,
-                [userId]
+                    COUNT(*) as total_clicks,
+                    MIN(clicked_at) as first_click,
+                    MAX(clicked_at) as last_click
+                 FROM clicks 
+                 WHERE url_id = ?`,
+                [urlId]
             );
             
-            return stats[0] || { total_urls: 0, total_clicks: 0, avg_clicks: 0 };
+            if (clickData[0] && clickData[0].first_click) {
+                const firstClick = new Date(clickData[0].first_click);
+                const daysActive = Math.floor((new Date() - firstClick) / (1000 * 60 * 60 * 24));
+                
+                if (daysActive > 0) {
+                    const clicksPerDay = (clicks / daysActive).toFixed(1);
+                    insights.push(`📅 Active for ${daysActive} day${daysActive === 1 ? '' : 's'}`);
+                    insights.push(`📊 Average: ${clicksPerDay} clicks per day`);
+                }
+            }
+            
+            // Time-based suggestions
+            const hour = new Date().getHours();
+            if (hour >= 9 && hour <= 17) {
+                insights.push(`⏰ Good time to share: People are active during work hours.`);
+            } else {
+                insights.push(`🌙 Evening hours: Perfect for leisure content sharing.`);
+            }
+            
+            // Final recommendation
+            if (clicks < 5) {
+                insights.push(`💡 AI Tip: Share on 2-3 different platforms for better reach.`);
+            } else if (clicks < 20) {
+                insights.push(`💡 AI Tip: Try adding a compelling description when sharing.`);
+            } else {
+                insights.push(`💡 AI Tip: Consider creating a QR code for offline sharing.`);
+            }
+            
+            return insights.join('\n\n');
+            
         } catch (error) {
-            return { total_urls: 0, total_clicks: 0, avg_clicks: 0 };
+            console.log('AI Insights error:', error.message);
+            return "🤖 AI is analyzing your link performance...";
         }
     }
 }
 
-module.exports = SimpleInsights;
+module.exports = AIInsights;

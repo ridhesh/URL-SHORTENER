@@ -1,7 +1,7 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const Auth = require('./auth');
-const SimpleInsights = require('./insights');
+const AIInsights = require('./insights');
 const pool = require('./database');
 
 const app = express();
@@ -12,10 +12,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static('public'));
+
 app.set('view engine', 'ejs');
 app.set('views', './views');
 
-// Store user ID
 app.use((req, res, next) => {
     req.userId = req.cookies.userId || null;
     next();
@@ -90,6 +90,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
             baseUrl: `${req.protocol}://${req.get('host')}`
         });
     } catch (error) {
+        console.error('Dashboard error:', error);
         res.redirect('/login');
     }
 });
@@ -108,7 +109,7 @@ app.post('/shorten', requireAuth, async (req, res) => {
             url = 'https://' + url;
         }
         
-        new URL(url); // Validate
+        new URL(url);
         
         let shortCode;
         for (let i = 0; i < 5; i++) {
@@ -141,51 +142,63 @@ app.post('/shorten', requireAuth, async (req, res) => {
     }
 });
 
-// Analytics
+// Analytics - FIXED ROUTE
 app.get('/analytics/:id', requireAuth, async (req, res) => {
     try {
+        const urlId = req.params.id;
+        
+        // Get URL info
         const [urls] = await pool.execute(
             'SELECT * FROM urls WHERE id = ? AND user_id = ?',
-            [req.params.id, req.userId]
+            [urlId, req.userId]
         );
-        if (urls.length === 0) return res.redirect('/dashboard');
         
-        const insights = await SimpleInsights.getInsights(urls[0].id, req.userId);
+        if (urls.length === 0) {
+            return res.redirect('/dashboard');
+        }
+        
+        const url = urls[0];
+        
+        // Get AI insights
+        const insights = await AIInsights.generateInsights(urlId, req.userId);
+        
         res.render('analytics', {
-            url: urls[0],
+            url: url,
             insights: insights,
             baseUrl: `${req.protocol}://${req.get('host')}`
         });
+        
     } catch (error) {
+        console.error('Analytics error:', error);
         res.redirect('/dashboard');
     }
 });
 
 // Delete
 app.post('/delete/:id', requireAuth, async (req, res) => {
-    await pool.execute(
-        'DELETE FROM urls WHERE id = ? AND user_id = ?',
-        [req.params.id, req.userId]
-    );
-    res.redirect('/dashboard');
+    try {
+        await pool.execute(
+            'DELETE FROM urls WHERE id = ? AND user_id = ?',
+            [req.params.id, req.userId]
+        );
+        res.redirect('/dashboard');
+    } catch (error) {
+        console.error('Delete error:', error);
+        res.redirect('/dashboard');
+    }
 });
 
 // ====== API ROUTES ======
 
-// API Documentation Page
+// API Documentation
 app.get('/api', (req, res) => {
     res.json({
         message: 'URL Shortener API',
         endpoints: {
             'GET /api/health': 'Check server status',
-            'POST /api/signup': 'Create account (JSON)',
-            'POST /api/login': 'Login (JSON)',
-            'POST /api/shorten': 'Create short URL (JSON)',
-            'GET /api/urls': 'Get user URLs (JSON)'
-        },
-        example: {
-            signup: 'POST /api/signup { "email": "test@example.com", "password": "test123" }',
-            shorten: 'POST /api/shorten { "long_url": "https://example.com" }'
+            'POST /api/signup': 'Create account',
+            'POST /api/login': 'Login',
+            'POST /api/shorten': 'Create short URL'
         }
     });
 });
@@ -236,7 +249,7 @@ app.post('/api/shorten', async (req, res) => {
             url = 'https://' + url;
         }
         
-        new URL(url); // Validate
+        new URL(url);
         
         let shortCode = generateShortCode();
         await pool.execute(
@@ -255,32 +268,14 @@ app.post('/api/shorten', async (req, res) => {
     }
 });
 
-// Get URLs API
-app.get('/api/urls', async (req, res) => {
-    try {
-        const userId = req.cookies.userId || req.query.userId;
-        if (!userId) {
-            return res.status(401).json({ success: false, error: 'Login required' });
-        }
-        
-        const [urls] = await pool.execute(
-            'SELECT * FROM urls WHERE user_id = ? ORDER BY created_at DESC',
-            [userId]
-        );
-        
-        res.json({ success: true, data: urls });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
 // ====== REDIRECT SHORT URLS ======
 
 app.get('/:code', async (req, res) => {
     const code = req.params.code;
     
     // Don't process our own routes
-    if (['login', 'signup', 'dashboard', 'shorten', 'analytics', 'logout', 'api', 'public'].includes(code)) {
+    const reserved = ['login', 'signup', 'dashboard', 'shorten', 'analytics', 'logout', 'api'];
+    if (reserved.includes(code)) {
         return res.status(404).render('404');
     }
     
@@ -308,10 +303,10 @@ app.get('/:code', async (req, res) => {
             [url.id, req.headers.referer || 'direct']
         );
         
-        // Redirect
         res.redirect(url.long_url);
         
     } catch (error) {
+        console.error('Redirect error:', error);
         res.status(500).render('error', { error: 'Server error' });
     }
 });
@@ -325,7 +320,7 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error('Error:', err.message);
+    console.error('Server error:', err.message);
     res.status(500).render('error', { error: 'Something went wrong' });
 });
 
@@ -333,6 +328,6 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`✅ Server running at http://localhost:${PORT}`);
     console.log(`🌐 Homepage: http://localhost:3000`);
-    console.log(`🔧 API: http://localhost:3000/api`);
     console.log(`📊 Dashboard: http://localhost:3000/dashboard`);
+    console.log(`🤖 AI Analytics: /analytics/:id`);
 });
